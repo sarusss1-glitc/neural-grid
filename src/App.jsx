@@ -47,7 +47,8 @@ const SFX = {
     click: () => playTone(440, "sine", 0.08, 0.08),
     win: () => [523, 659, 784, 1047].forEach((f, i) => playTone(f, "sine", 0.4, 0.1, i * 0.1)),
     undo: () => playTone(220, "triangle", 0.1, 0.05),
-    nav: () => playTone(880, "sine", 0.05, 0.05)
+    nav: () => playTone(880, "sine", 0.05, 0.05),
+    hint: () => playTone(600, "sine", 0.1, 0.05)
 };
 
 // --- 3. DATA BUILDERS ---
@@ -206,15 +207,15 @@ export default function InvariantMaster() {
         });
     };
 
-  // --- NEW LOGIC: STARS, ANOMALY & SHARE ---
     const getStars = (m, u) => {
         if (lv.solvable === false) return 3;
-        if (m <= lv.par && u === 0) return 3; // Perfect
-        if (m <= lv.par + 2) return 2; // Good
-        return 1; // Solved
+        if (m <= lv.par && u === 0) return 3;
+        if (m <= lv.par + 2) return 2;
+        return 1;
     };
 
     const currentStars = getStars(moves, undos);
+    const parUnlocked = moves >= 10 || timer >= 15;
 
     const handleAnomaly = () => {
         SFX.win();
@@ -253,6 +254,27 @@ export default function InvariantMaster() {
                 </div>
             )}
 
+            {scene === "menu" && (
+                <div style={{ width: '100%', maxWidth: 650, textAlign: 'center', animation: 'fadeIn 0.5s' }}>
+                    <h2 style={{ letterSpacing: 5, color: '#06b6d4' }}>LEVELS [60]</h2>
+                    <div className="level-grid">
+                        {LEVELS.map((l, i) => {
+                            const isUnlocked = i === 0 || progress[i-1] !== undefined;
+                            const stars = progress[i] || 0;
+                            return (
+                                <button key={i} className="level-btn" disabled={!isUnlocked} onClick={() => { 
+                                    SFX.nav(); setLvIdx(i); initLevel(i); setScene("play"); 
+                                }} style={{ borderColor: stars ? '#06b6d4' : '#222' }}>
+                                    {i + 1}
+                                    {stars === 3 && <div className="level-star" style={{color: '#eab308', borderColor: '#eab308'}}>★</div>}
+                                    {stars > 0 && stars < 3 && <div className="level-star" style={{color: '#22c55e', borderColor: '#22c55e'}}>✓</div>}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             {scene === "play" && (
                 <div style={{ width: '100%', maxWidth: 500, animation: 'fadeIn 0.5s' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -260,47 +282,6 @@ export default function InvariantMaster() {
                         <div style={{ textAlign: 'right' }}>
                             <div className="hud-label">RATING</div>
                             <div style={{ color: '#06b6d4', fontSize: 16 }}>{"⭐️".repeat(currentStars)}</div>
-                        </div>
-                    </div>
-
-                    <div style={{ textAlign: 'center', marginBottom: 25 }}>
-                        <div className="hud-label" style={{ color: '#06b6d4' }}>{lv.concept}</div>
-                        <div style={{ fontSize: 11, color: '#444' }}>TARGET: {lv.par} MOVES | CURRENT: {moves}</div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10, margin: '0 auto', width: 'fit-content' }}>
-                        {board.map((v, i) => (
-                            <div key={i} className="node-container">
-                                <button className={`node ${v ? 'active' : ''}`} onClick={() => handleNode(i)} />
-                            </div>
-                        ))}
-                    </div>
-
-                    <div style={{ marginTop: 30, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button className="btn-util" onClick={() => { SFX.undo(); setBoard(history[history.length-1]); setHistory(p=>p.slice(0,-1)); setMoves(m=>Math.max(0, m-1)); setUndos(u=>u+1); }} disabled={history.length === 0 || locked}>UNDO</button>
-                        <button className="btn-util" onClick={() => initLevel(lvIdx)}>RESTART</button>
-                        <button className="btn-util" onClick={() => { SFX.hint(); setHintStep(s => s + 1); }} disabled={hintStep >= lv.hints.length}>HINT</button>
-                        {!lv.solvable && (
-                            <button className="btn-util" style={{ background: '#ef4444', color: '#fff', border: 'none' }} onClick={handleAnomaly}>DECLARE ANOMALY</button>
-                        )}
-                    </div>
-
-                    {hintStep > 0 && (
-                        <div style={{ marginTop: 20, color: '#888', fontSize: 12, textAlign: 'left', padding: 10, background: '#0a0a0a', borderLeft: '2px solid #06b6d4' }}>
-                            {lv.hints.slice(0, hintStep).map((h, i) => <div key={i}>{"> "} {h}</div>)}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {scene === "play" && (
-                <div style={{ width: '100%', maxWidth: 500, animation: 'fadeIn 0.5s' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-                        <button className="btn-util" onClick={() => setScene("menu")}>← GRID</button>
-                        <div style={{ textAlign: 'right' }}>
-                            <div className="hud-label">Efficiency</div>
-                            <div style={{ color: currentEfficiency > 80 ? '#06b6d4' : '#f59e0b', fontSize: 16 }}>{currentEfficiency}%</div>
-                            <div className="efficiency-bar"><div className="efficiency-fill" style={{ width: `${currentEfficiency}%` }} /></div>
                         </div>
                     </div>
 
@@ -318,14 +299,14 @@ export default function InvariantMaster() {
                     </div>
 
                     <div style={{ marginTop: 30, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button className="btn-util" onClick={() => { SFX.undo(); setBoard(history[history.length-1]); setHistory(p=>p.slice(0,-1)); setMoves(m=>m-1); setUndos(u=>u+1); }} disabled={history.length === 0 || locked}>UNDO</button>
+                        <button className="btn-util" onClick={() => { SFX.undo(); setBoard(history[history.length-1]); setHistory(p=>p.slice(0,-1)); setMoves(m=>Math.max(0, m-1)); setUndos(u=>u+1); }} disabled={history.length === 0 || locked}>UNDO</button>
                         <button className="btn-util" onClick={() => initLevel(lvIdx)}>RESTART</button>
                         <button className="btn-util" onClick={() => setShowPAR(true)} disabled={!parUnlocked}>
                             {showPAR ? `PAR: ${lv.par}` : "SHOW PAR (?)"}
                         </button>
                         <button className="btn-util" onClick={() => { SFX.hint(); setHintStep(s => s + 1); }} disabled={hintStep >= lv.hints.length}>HINT</button>
                         {!lv.solvable && (
-                            <button className="btn-util" style={{ background: '#ef4444', color: '#fff', border: 'none' }} onClick={() => onWin(0)}>DECLARE ANOMALY</button>
+                            <button className="btn-util" style={{ background: '#ef4444', color: '#fff', border: 'none' }} onClick={handleAnomaly}>DECLARE ANOMALY</button>
                         )}
                     </div>
 
