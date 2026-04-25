@@ -121,7 +121,7 @@ const LEVELS = [
     B(4, [0, 1, 2, 3, 4, 8, 12], "The L-Shape", ["Combine row and column."]),
     B(4, [5, 6, 9, 10, 0, 3], "Core and Corners", ["A symmetric lock."]),
     B(4, [1, 2, 4, 11, 13, 14], "The Asymmetric Ring", ["Try to outline the edges."]),
-    UL(4, [0,1,1,1, 1,0,1,1, 1,1,1,1, 1,1,1,1], "Diagonal Trap", ["Two adjacent missing nodes."], "PROOF: Violates null space overlap."),
+    UL(4, [0,1,1,1, 1,0,1,1, 1,1,1,1, 1,1,1,1], "Diagonal Trap", ["Two adjacent missing nodes."], "PROOF: Diagonal anomaly prevents orthogonal resolution."),
     B(4, [0, 2, 5, 7, 8, 10, 13, 15], "Checkerboard", ["An alternating grid pattern."]),
     B(4, [0, 1, 2, 3, 4, 5, 6, 7], "Top Hemisphere", ["A heavy inversion."]),
     B(4, [0, 1, 4, 5, 10, 11, 14, 15], "Dual Blocks", ["Opposite corner blocks."]),
@@ -201,26 +201,45 @@ export default function InvariantMaster() {
         const won = nb.every(v => v === 1);
         setMoves(m => {
             const next = m + 1;
-            if (won && lv.solvable !== false) {
-                setLocked(true);
-                const score = calculateEfficiency(next, undos);
-                setTimeout(() => {
-                    SFX.win();
-                    setProgress(p => ({ ...p, [lvIdx]: Math.max(p[lvIdx] || 0, score) }));
-                    setScene("win");
-                }, 500);
-            }
+            if (won && lv.solvable !== false) handleWinUpdate(next);
             return next;
         });
     };
 
-    const calculateEfficiency = (m, u) => {
-        if (lv.solvable === false) return 100;
-        return Math.max(0, Math.floor((lv.par / Math.max(m, lv.par)) * 100 - (u * 5)));
+  // --- NEW LOGIC: STARS, ANOMALY & SHARE ---
+    const getStars = (m, u) => {
+        if (lv.solvable === false) return 3;
+        if (m <= lv.par && u === 0) return 3; // Perfect
+        if (m <= lv.par + 2) return 2; // Good
+        return 1; // Solved
     };
 
-    const currentEfficiency = calculateEfficiency(moves, undos);
-    const parUnlocked = moves >= 10 || timer >= 15;
+    const currentStars = getStars(moves, undos);
+
+    const handleAnomaly = () => {
+        SFX.win();
+        setProgress(p => ({ ...p, [lvIdx]: Math.max(p[lvIdx] || 0, 3) }));
+        setScene("win");
+    };
+
+    const handleWinUpdate = (nextMoves) => {
+        setLocked(true);
+        const score = getStars(nextMoves, undos);
+        setTimeout(() => {
+            SFX.win();
+            setProgress(p => ({ ...p, [lvIdx]: Math.max(p[lvIdx] || 0, score) }));
+            setScene("win");
+        }, 500);
+    };
+
+    const generateShareText = () => {
+        const grid = board.map(v => v ? "🟦" : "⬛").reduce((acc, emoji, i) => {
+            return acc + emoji + ((i + 1) % cols === 0 ? "\n" : "");
+        }, "");
+        const text = `NEURAL GRID #${lvIdx + 1}\n${"⭐️".repeat(currentStars)}\nMOVES: ${moves} (PAR: ${lv.par})\n\n${grid}\nCan you stabilize it?`;
+        navigator.clipboard.writeText(text);
+        alert("Copied to clipboard! Ready to share.");
+    };
 
     return (
         <div style={{ padding: 20, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -234,23 +253,43 @@ export default function InvariantMaster() {
                 </div>
             )}
 
-            {scene === "menu" && (
-                <div style={{ width: '100%', maxWidth: 650, textAlign: 'center', animation: 'fadeIn 0.5s' }}>
-                    <h2 style={{ letterSpacing: 5, color: '#06b6d4' }}>SIGNAL_ARCHIVE [60]</h2>
-                    <div className="level-grid">
-                        {LEVELS.map((l, i) => {
-                            const isUnlocked = i === 0 || progress[i-1] !== undefined;
-                            const score = progress[i];
-                            return (
-                                <button key={i} className="level-btn" disabled={!isUnlocked} onClick={() => { 
-                                    SFX.nav(); setLvIdx(i); initLevel(i); setScene("play"); 
-                                }} style={{ borderColor: score ? '#06b6d4' : '#222' }}>
-                                    {i + 1}
-                                    {score === 100 && <div className="level-star">★</div>}
-                                </button>
-                            );
-                        })}
+            {scene === "play" && (
+                <div style={{ width: '100%', maxWidth: 500, animation: 'fadeIn 0.5s' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                        <button className="btn-util" onClick={() => setScene("menu")}>← LEVELS</button>
+                        <div style={{ textAlign: 'right' }}>
+                            <div className="hud-label">RATING</div>
+                            <div style={{ color: '#06b6d4', fontSize: 16 }}>{"⭐️".repeat(currentStars)}</div>
+                        </div>
                     </div>
+
+                    <div style={{ textAlign: 'center', marginBottom: 25 }}>
+                        <div className="hud-label" style={{ color: '#06b6d4' }}>{lv.concept}</div>
+                        <div style={{ fontSize: 11, color: '#444' }}>TARGET: {lv.par} MOVES | CURRENT: {moves}</div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10, margin: '0 auto', width: 'fit-content' }}>
+                        {board.map((v, i) => (
+                            <div key={i} className="node-container">
+                                <button className={`node ${v ? 'active' : ''}`} onClick={() => handleNode(i)} />
+                            </div>
+                        ))}
+                    </div>
+
+                    <div style={{ marginTop: 30, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button className="btn-util" onClick={() => { SFX.undo(); setBoard(history[history.length-1]); setHistory(p=>p.slice(0,-1)); setMoves(m=>Math.max(0, m-1)); setUndos(u=>u+1); }} disabled={history.length === 0 || locked}>UNDO</button>
+                        <button className="btn-util" onClick={() => initLevel(lvIdx)}>RESTART</button>
+                        <button className="btn-util" onClick={() => { SFX.hint(); setHintStep(s => s + 1); }} disabled={hintStep >= lv.hints.length}>HINT</button>
+                        {!lv.solvable && (
+                            <button className="btn-util" style={{ background: '#ef4444', color: '#fff', border: 'none' }} onClick={handleAnomaly}>DECLARE ANOMALY</button>
+                        )}
+                    </div>
+
+                    {hintStep > 0 && (
+                        <div style={{ marginTop: 20, color: '#888', fontSize: 12, textAlign: 'left', padding: 10, background: '#0a0a0a', borderLeft: '2px solid #06b6d4' }}>
+                            {lv.hints.slice(0, hintStep).map((h, i) => <div key={i}>{"> "} {h}</div>)}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -266,7 +305,7 @@ export default function InvariantMaster() {
                     </div>
 
                     <div style={{ textAlign: 'center', marginBottom: 25 }}>
-                        <div className="hud-label" style={{ color: '#06b6d4' }}>{lv.name}</div>
+                        <div className="hud-label" style={{ color: '#06b6d4' }}>{lv.concept}</div>
                         <div style={{ fontSize: 11, color: '#444' }}>{cols}x{rows} GRID | MOVES: {moves}</div>
                     </div>
 
@@ -284,7 +323,7 @@ export default function InvariantMaster() {
                         <button className="btn-util" onClick={() => setShowPAR(true)} disabled={!parUnlocked}>
                             {showPAR ? `PAR: ${lv.par}` : "SHOW PAR (?)"}
                         </button>
-                        <button className="btn-util" onClick={() => { sfx.hint(); setHintStep(s => s + 1); }} disabled={hintStep >= lv.hints.length}>HINT</button>
+                        <button className="btn-util" onClick={() => { SFX.hint(); setHintStep(s => s + 1); }} disabled={hintStep >= lv.hints.length}>HINT</button>
                         {!lv.solvable && (
                             <button className="btn-util" style={{ background: '#ef4444', color: '#fff', border: 'none' }} onClick={() => onWin(0)}>DECLARE ANOMALY</button>
                         )}
@@ -300,19 +339,20 @@ export default function InvariantMaster() {
 
             {scene === "win" && (
                 <div style={{ textAlign: 'center', marginTop: '15vh', animation: 'fadeIn 0.8s' }}>
-                    <h1 style={{ color: '#06b6d4', letterSpacing: 8 }}>SIGNAL_STABLE</h1>
+                    <h1 style={{ color: '#06b6d4', letterSpacing: 8 }}>STABILIZED</h1>
                     <div style={{ background: '#0a0a0a', border: '1px solid #222', padding: 30, borderRadius: 8, margin: '30px 0', minWidth: 300 }}>
-                        <div className="hud-label">{lv.name} Resolved</div>
-                        <div style={{ fontSize: 54, color: '#fff', margin: '10px 0' }}>{currentEfficiency}%</div>
-                        <div style={{ color: '#555', fontSize: 11 }}>{moves} MOVES | {undos} UNDOS</div>
+                        <div className="hud-label">{lv.concept}</div>
+                        <div style={{ fontSize: 40, margin: '15px 0' }}>{"⭐️".repeat(currentStars)}</div>
+                        <div style={{ color: '#555', fontSize: 11 }}>{moves} MOVES | PAR: {lv.par}</div>
                         {lv.solvable === false && <div style={{ color: '#ef4444', fontSize: 11, marginTop: 15 }}>PROOF: {lv.proof}</div>}
                     </div>
-                    <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                        <button className="btn-util" onClick={() => setScene("menu")}>GRID</button>
-                        <button className="btn-util" style={{ background: '#06b6d4', color: '#000', border: 'none', padding: '12px 30px' }} onClick={() => {
+                    <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button className="btn-util" style={{ background: '#22c55e', color: '#000', border: 'none' }} onClick={generateShareText}>SHARE 🔗</button>
+                        <button className="btn-util" onClick={() => setScene("menu")}>LEVELS</button>
+                        <button className="btn-util" style={{ background: '#06b6d4', color: '#000', border: 'none' }} onClick={() => {
                             if (lvIdx + 1 < LEVELS.length) { setLvIdx(lvIdx + 1); initLevel(lvIdx + 1); setScene("play"); }
                             else { setScene("menu"); }
-                        }}>NEXT_LEVEL</button>
+                        }}>NEXT</button>
                     </div>
                 </div>
             )}
