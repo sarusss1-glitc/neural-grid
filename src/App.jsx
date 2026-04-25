@@ -292,7 +292,7 @@ export default function InvariantMaster() {
 
                     {hintStep > 0 && (
                         <div style={{ marginTop: 20, color: '#888', fontSize: 12, textAlign: 'left', padding: 10, background: '#0a0a0a', borderLeft: '2px solid #06b6d4' }}>
-                            {lv.hints.slice(0, hintStep).map((h, i) => <div key={i}>> {h}</div>)}
+                            {lv.hints.slice(0, hintStep).map((h, i) => <div key={i}>{"> "} {h}</div>)}
                         </div>
                     )}
                 </div>
