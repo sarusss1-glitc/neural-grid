@@ -201,7 +201,7 @@ export default function InvariantMaster() {
         setHistory([]); setMoves(0); setUndos(0); setHintStep(0); setShowPAR(false); setLocked(false);
     };
 
-const handleNode = (clickedIdx) => {
+    const handleNode = (clickedIdx) => {
         if (locked) return;
         SFX.click();
         setLocked(true);
@@ -278,12 +278,6 @@ const handleNode = (clickedIdx) => {
     const currentStars = getStars(moves, undos);
     const parUnlocked = moves >= 10 || timer >= 15;
 
-    const handleAnomaly = () => {
-        SFX.win();
-        setProgress(p => ({ ...p, [lvIdx]: Math.max(p[lvIdx] || 0, 3) }));
-        setScene("win");
-    };
-
     const handleWinUpdate = (nextMoves) => {
         setLocked(true);
         const score = getStars(nextMoves, undos);
@@ -310,14 +304,14 @@ const handleNode = (clickedIdx) => {
 
             {scene === "boot" && (
                 <div style={{ marginTop: '30vh', textAlign: 'center', animation: 'fadeIn 2s' }}>
-                    <div style={{ color: '#06b6d4', letterSpacing: 10, fontSize: 24, fontWeight: 'bold' }}>NEURAL_GRID_v6.0</div>
-                    <div style={{ color: '#333', marginTop: 10 }}>UNPACKING 60 STABILIZERS...</div>
+                    <div style={{ color: '#00f0ff', letterSpacing: 10, fontSize: 24, fontWeight: 'bold', textShadow: '0 0 15px #00f0ff' }}>NEURAL GRID</div>
+                    <div style={{ color: '#94a3b8', marginTop: 10 }}>UNPACKING ARCHIVE...</div>
                 </div>
             )}
 
             {scene === "menu" && (
                 <div style={{ width: '100%', maxWidth: 650, textAlign: 'center', animation: 'fadeIn 0.5s' }}>
-                    <h2 style={{ letterSpacing: 5, color: '#06b6d4' }}>LEVELS [60]</h2>
+                    <h2 style={{ letterSpacing: 5, color: '#00f0ff', textShadow: '0 0 10px rgba(0,240,255,0.5)' }}>LEVELS [60]</h2>
                     <div className="level-grid">
                         {LEVELS.map((l, i) => {
                             const isUnlocked = i === 0 || progress[i-1] !== undefined;
@@ -325,10 +319,10 @@ const handleNode = (clickedIdx) => {
                             return (
                                 <button key={i} className="level-btn" disabled={!isUnlocked} onClick={() => { 
                                     SFX.nav(); setLvIdx(i); initLevel(i); setScene("play"); 
-                                }} style={{ borderColor: stars ? '#06b6d4' : '#222' }}>
+                                }} style={{ borderColor: stars ? '#00f0ff' : '#1e293b' }}>
                                     {i + 1}
-                                    {stars === 3 && <div className="level-star" style={{color: '#eab308', borderColor: '#eab308'}}>★</div>}
-                                    {stars > 0 && stars < 3 && <div className="level-star" style={{color: '#22c55e', borderColor: '#22c55e'}}>✓</div>}
+                                    {stars === 3 && <div className="level-star" style={{color: '#eab308', borderColor: '#eab308', boxShadow: '0 0 8px rgba(234,179,8,0.5)'}}>★</div>}
+                                    {stars > 0 && stars < 3 && <div className="level-star" style={{color: '#22c55e', borderColor: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.5)'}}>✓</div>}
                                 </button>
                             );
                         })}
@@ -342,18 +336,18 @@ const handleNode = (clickedIdx) => {
                         <button className="btn-util" onClick={() => setScene("menu")}>← LEVELS</button>
                         <div style={{ textAlign: 'right' }}>
                             <div className="hud-label">RATING</div>
-                            <div style={{ color: '#06b6d4', fontSize: 16 }}>{"⭐️".repeat(currentStars)}</div>
+                            <div style={{ color: '#00f0ff', fontSize: 16, textShadow: '0 0 8px rgba(0,240,255,0.6)' }}>{"⭐️".repeat(currentStars)}</div>
                         </div>
                     </div>
 
                     <div style={{ textAlign: 'center', marginBottom: 25 }}>
-                        <div className="hud-label" style={{ color: '#06b6d4' }}>
-    {progress[lvIdx] ? lv.concept : "??? (STABILIZE TO DISCOVER)"}
-</div>
-                        <div style={{ fontSize: 11, color: '#444' }}>{cols}x{rows} GRID | MOVES: {moves}</div>
+                        <div className="hud-label" style={{ color: '#00f0ff', textShadow: '0 0 8px rgba(0,240,255,0.4)', fontSize: 14 }}>
+                            {progress[lvIdx] ? lv.concept : "??? (STABILIZE TO DISCOVER)"}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 8 }}>{cols}x{rows} GRID | MOVES: {moves}</div>
                     </div>
 
-                   <div className="board-container">
+                    <div className="board-container">
                         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12, margin: '0 auto', width: 'fit-content' }}>
                             {board.map((v, i) => {
                                 let isPreview = false;
@@ -363,7 +357,6 @@ const handleNode = (clickedIdx) => {
                                     if (Math.abs(r_hover - r_i) + Math.abs(c_hover - c_i) <= 1) isPreview = true;
                                 }
                                 
-                                // אם התא דלוק (v=1) והוא עומד להיות מושפע, הוא יקבל את הקלאס ההרסני (אדום)
                                 const previewClass = isPreview ? (v ? 'preview-destructive' : 'preview') : '';
                                 
                                 return (
@@ -383,14 +376,14 @@ const handleNode = (clickedIdx) => {
                     <div style={{ marginTop: 30, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button className="btn-util" onClick={() => { SFX.undo(); setBoard(history[history.length-1]); setHistory(p=>p.slice(0,-1)); setMoves(m=>Math.max(0, m-1)); setUndos(u=>u+1); }} disabled={history.length === 0 || locked}>UNDO</button>
                         <button className="btn-util" onClick={() => initLevel(lvIdx)}>RESTART</button>
-                        <button className="btn-util" onClick={() => setPreviewMode(!previewMode)} style={{ color: previewMode ? '#06b6d4' : '#666', borderColor: previewMode ? '#06b6d4' : '#333' }}>
+                        <button className="btn-util" onClick={() => setPreviewMode(!previewMode)} style={{ color: previewMode ? '#00f0ff' : '#94a3b8', borderColor: previewMode ? '#00f0ff' : '#1e293b' }}>
                             PREVIEW [{previewMode ? 'ON' : 'OFF'}]
                         </button>
                         <button className="btn-util" onClick={() => setShowPAR(true)} disabled={!parUnlocked}>
                             {showPAR ? `PAR: ${lv.par}` : "SHOW PAR (?)"}
                         </button>
                         <button className="btn-util" onClick={() => { SFX.hint(); setHintStep(s => s + 1); }} disabled={hintStep >= lv.hints.length}>HINT</button>
-                       {!lv.solvable && (
+                        {!lv.solvable && (
                             <button className="btn-util" disabled={locked} style={{ background: locked ? '#7f1d1d' : '#ef4444', color: '#fff', border: 'none', animation: !locked ? 'pulseGlow 1.5s infinite' : 'none' }} onClick={handleAnomaly}>
                                 {locked ? 'ANALYZING...' : '⚠ DECLARE ANOMALY'}
                             </button>
@@ -398,20 +391,19 @@ const handleNode = (clickedIdx) => {
                     </div>
 
                     {hintStep > 0 && (
-                        <div style={{ marginTop: 20, color: '#888', fontSize: 12, textAlign: 'left', padding: 10, background: '#0a0a0a', borderLeft: '2px solid #06b6d4' }}>
-                            {lv.hints.slice(0, hintStep).map((h, i) => <div key={i}>{"> "} {h}</div>)}
+                        <div style={{ marginTop: 20, color: '#94a3b8', fontSize: 12, textAlign: 'left', padding: 15, background: 'rgba(15,23,42,0.6)', borderLeft: '2px solid #00f0ff', borderRadius: '4px' }}>
+                            {lv.hints.slice(0, hintStep).map((h, i) => <div key={i} style={{marginBottom: 6}}>{"> "} {h}</div>)}
                         </div>
                     )}
 
-                    {/* מסך הדרמה של האנומליה יקפוץ לכאן כשצריך */}
                     {anomalyPhase === 2 && (
                         <div style={{ position: 'fixed', inset: 0, background: 'rgba(3, 7, 18, 0.95)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.4s ease', zIndex: 100, padding: 40, textAlign: 'center' }}>
                             <div style={{ color: '#ef4444', fontSize: 13, letterSpacing: 4, marginBottom: 12 }}>⚠ ANOMALY CONFIRMED</div>
-                            <div style={{ color: '#06b6d4', fontSize: 24, fontWeight: 'bold', marginBottom: 30 }}>QUANTUM LOCK DETECTED</div>
-                            <div style={{ background: '#0f172a', border: '1px solid #ef4444', borderRadius: 8, padding: '20px 30px', maxWidth: 420, color: '#f87171', fontSize: 13, lineHeight: 1.8, fontStyle: 'italic' }}>
+                            <div style={{ color: '#00f0ff', fontSize: 24, fontWeight: 'bold', marginBottom: 30, textShadow: '0 0 15px rgba(0,240,255,0.5)' }}>QUANTUM LOCK DETECTED</div>
+                            <div style={{ background: '#0f172a', border: '1px solid #ef4444', borderRadius: 8, padding: '20px 30px', maxWidth: 420, color: '#f87171', fontSize: 13, lineHeight: 1.8, fontStyle: 'italic', boxShadow: '0 0 20px rgba(239,68,68,0.2)' }}>
                                 {lv.proof || "This state lies outside the reachable subspace."}
                             </div>
-                            <div style={{ color: '#374151', fontSize: 11, marginTop: 25 }}>ANALYZING KERNEL INTERSECTION...</div>
+                            <div style={{ color: '#475569', fontSize: 11, marginTop: 25 }}>ANALYZING KERNEL INTERSECTION...</div>
                         </div>
                     )}
                 </div>
@@ -419,21 +411,22 @@ const handleNode = (clickedIdx) => {
 
             {scene === "win" && (
                 <div style={{ textAlign: 'center', marginTop: '15vh', animation: 'fadeIn 0.8s' }}>
-                    <h1 style={{ color: '#06b6d4', letterSpacing: 8 }}>STABILIZED</h1>
-                    <div style={{ background: '#0a0a0a', border: '1px solid #222', padding: 30, borderRadius: 8, margin: '30px 0', minWidth: 300 }}>
-                        <div style={{ color: '#22c55e', fontSize: 12, letterSpacing: 2, marginBottom: 10 }}>SIGNAL STABILIZED</div>
-                        <div className="hud-label" style={{ color: '#06b6d4', fontSize: 14 }}>YOU DISCOVERED:</div>
-                        <div style={{ fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 15 }}>{lv.concept}</div>
-                        <div style={{ fontSize: 40, margin: '15px 0' }}>{"⭐️".repeat(currentStars)}</div>
-                        <div style={{ color: '#555', fontSize: 11 }}>{moves} MOVES | PAR: {lv.par}</div>
-                        {lv.solvable === false && <div style={{ color: '#ef4444', fontSize: 11, marginTop: 15 }}>PROOF: {lv.proof}</div>}
+                    <h1 style={{ color: '#00f0ff', letterSpacing: 8, textShadow: '0 0 15px rgba(0,240,255,0.6)' }}>STABILIZED</h1>
+                    <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid #1e293b', padding: 40, borderRadius: 12, margin: '30px 0', minWidth: 350, boxShadow: '0 20px 40px rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)' }}>
+                        <div style={{ color: '#22c55e', fontSize: 12, letterSpacing: 2, marginBottom: 15, fontWeight: 'bold' }}>SIGNAL STABILIZED</div>
+                        <div className="hud-label" style={{ color: '#94a3b8', fontSize: 12 }}>YOU DISCOVERED:</div>
+                        <div style={{ fontSize: 22, fontWeight: 'bold', color: '#fff', margin: '10px 0 25px 0' }}>{lv.concept}</div>
+                        <div style={{ fontSize: 40, margin: '15px 0', textShadow: '0 0 10px rgba(255,255,255,0.3)' }}>{"⭐️".repeat(currentStars)}</div>
+                        <div style={{ color: '#64748b', fontSize: 12, marginTop: 15 }}>{moves} MOVES | PAR: {lv.par}</div>
+                        {lv.solvable === false && <div style={{ color: '#ef4444', fontSize: 12, marginTop: 20, fontStyle: 'italic' }}>PROOF: {lv.proof}</div>}
                     </div>
-                    <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-<button className="btn-util" style={{ background: '#00f0ff', color: '#030712', border: 'none', fontSize: '14px', padding: '12px 30px', boxShadow: '0 0 20px rgba(0, 240, 255, 0.6)' }} onClick={generateShareText}>BRAG & SHARE 🔗</button>                        <button className="btn-util" onClick={() => setScene("menu")}>LEVELS</button>
-                        <button className="btn-util" style={{ background: '#06b6d4', color: '#000', border: 'none' }} onClick={() => {
+                    <div style={{ display: 'flex', gap: 15, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button className="btn-util" style={{ background: '#00f0ff', color: '#030712', border: 'none', fontSize: '14px', padding: '12px 30px', boxShadow: '0 0 20px rgba(0, 240, 255, 0.4)' }} onClick={generateShareText}>BRAG & SHARE 🔗</button>
+                        <button className="btn-util" onClick={() => setScene("menu")}>LEVELS</button>
+                        <button className="btn-util" style={{ background: '#f8fafc', color: '#030712', border: 'none' }} onClick={() => {
                             if (lvIdx + 1 < LEVELS.length) { setLvIdx(lvIdx + 1); initLevel(lvIdx + 1); setScene("play"); }
                             else { setScene("menu"); }
-                        }}>NEXT</button>
+                        }}>NEXT NODE</button>
                     </div>
                 </div>
             )}
