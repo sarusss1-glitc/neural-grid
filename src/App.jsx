@@ -25,19 +25,18 @@ body { margin: 0; background: #030712; color: #f8fafc; font-family: 'Courier New
 /* Active Node (Neon Cyan) */
 .node.active { background: #00f0ff; border: 2px solid #fff; animation: pulseGlow 2s infinite; }
 
-/* Preview Nodes */
-.node.preview { background: rgba(0, 240, 255, 0.15); border: 2px dashed #00f0ff; }
-.node.active.preview-destructive { border: 2px dashed #ff003c; box-shadow: 0 0 20px rgba(255, 0, 60, 0.6); background: #ff003c; animation: none; }
+/* Preview Nodes (FIXED: Logical Colors) */
+.node.preview-on { background: rgba(0, 240, 255, 0.15); border: 2px dashed #00f0ff; box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
+.node.active.preview-off { background: rgba(0, 240, 255, 0.1); border: 2px dashed #64748b; box-shadow: none; animation: none; opacity: 0.3; }
 
 /* UI Elements */
 .hud-label { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; font-weight: bold; }
-.level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; max-width: 550px; margin: 30px auto; max-height: 65vh; overflow-y: auto; padding: 20px; background: rgba(15,23,42,0.4); border-radius: 12px; border: 1px solid #1e293b; }
-.level-btn { aspect-ratio: 1; border-radius: 8px; border: 1px solid #1e293b; background: #0f172a; color: #f8fafc; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.4); }
-.level-btn:hover:not(:disabled) { border-color: #00f0ff; transform: scale(1.08); background: #020617; box-shadow: 0 0 15px rgba(0, 240, 255, 0.2); }
-.level-btn:disabled { opacity: 0.15; cursor: not-allowed; box-shadow: none; }
-.level-star { position: absolute; top: -6px; right: -6px; font-size: 11px; background: #030712; border-radius: 50%; width: 22px; height: 22px; display:flex; justify-content:center; align-items:center; border: 1px solid #00f0ff; color: #00f0ff; box-shadow: 0 0 8px rgba(0, 240, 255, 0.4); }
+.level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; max-width: 550px; margin: 20px auto; max-height: 65vh; overflow-y: auto; padding: 25px; background: linear-gradient(180deg, rgba(15,23,42,0.6) 0%, rgba(2,6,23,0.8) 100%); border-radius: 16px; border: 1px solid rgba(0, 240, 255, 0.15); box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 0 20px rgba(0, 240, 255, 0.05); backdrop-filter: blur(10px); }
+.level-btn { aspect-ratio: 1; border-radius: 8px; border: 1px solid #334155; background: rgba(30, 41, 59, 0.6); color: #f8fafc; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+.level-btn:hover:not(:disabled) { border-color: #00f0ff; transform: scale(1.1) translateY(-2px); background: rgba(0, 240, 255, 0.15); box-shadow: 0 10px 20px rgba(0, 240, 255, 0.3), inset 0 0 10px rgba(0, 240, 255, 0.2); z-index: 10; }
+.level-btn:disabled { opacity: 0.45; background: rgba(15, 23, 42, 0.3); border-color: #0f172a; color: #475569; box-shadow: none; }
+.level-star { position: absolute; top: -6px; right: -6px; font-size: 11px; border-radius: 50%; width: 22px; height: 22px; display:flex; justify-content:center; align-items:center; }
 `;
-
 
 // --- 2. AUDIO ENGINE ---
 let _ac = null;
@@ -309,9 +308,14 @@ export default function InvariantMaster() {
                 </div>
             )}
 
-            {scene === "menu" && (
-                <div style={{ width: '100%', maxWidth: 650, textAlign: 'center', animation: 'fadeIn 0.5s' }}>
-                    <h2 style={{ letterSpacing: 5, color: '#00f0ff', textShadow: '0 0 10px rgba(0,240,255,0.5)' }}>LEVELS [60]</h2>
+           {scene === "menu" && (
+                <div style={{ width: '100%', maxWidth: 650, textAlign: 'center', animation: 'fadeIn 0.5s', position: 'relative' }}>
+                    {/* הילת רקע זוהרת למסך */}
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90%', height: '90%', background: 'radial-gradient(circle, rgba(0,240,255,0.08) 0%, transparent 70%)', zIndex: -1, pointerEvents: 'none' }} />
+                    
+                    <h2 style={{ letterSpacing: 5, color: '#00f0ff', textShadow: '0 0 15px rgba(0,240,255,0.6)', margin: '0 0 5px 0' }}>SIGNAL ARCHIVE</h2>
+                    <div style={{ color: '#94a3b8', fontSize: 11, marginBottom: 25, letterSpacing: 2 }}>SELECT A NODE TO STABILIZE</div>
+                    
                     <div className="level-grid">
                         {LEVELS.map((l, i) => {
                             const isUnlocked = i === 0 || progress[i-1] !== undefined;
@@ -319,10 +323,10 @@ export default function InvariantMaster() {
                             return (
                                 <button key={i} className="level-btn" disabled={!isUnlocked} onClick={() => { 
                                     SFX.nav(); setLvIdx(i); initLevel(i); setScene("play"); 
-                                }} style={{ borderColor: stars ? '#00f0ff' : '#1e293b' }}>
+                                }} style={stars ? { borderColor: '#00f0ff', background: 'rgba(0, 240, 255, 0.05)' } : {}}>
                                     {i + 1}
-                                    {stars === 3 && <div className="level-star" style={{color: '#eab308', borderColor: '#eab308', boxShadow: '0 0 8px rgba(234,179,8,0.5)'}}>★</div>}
-                                    {stars > 0 && stars < 3 && <div className="level-star" style={{color: '#22c55e', borderColor: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.5)'}}>✓</div>}
+                                    {stars === 3 && <div className="level-star" style={{color: '#000', background: '#eab308', borderColor: '#eab308', boxShadow: '0 0 10px #eab308'}}>★</div>}
+                                    {stars > 0 && stars < 3 && <div className="level-star" style={{color: '#000', background: '#22c55e', borderColor: '#22c55e', boxShadow: '0 0 10px #22c55e'}}>✓</div>}
                                 </button>
                             );
                         })}
@@ -357,7 +361,8 @@ export default function InvariantMaster() {
                                     if (Math.abs(r_hover - r_i) + Math.abs(c_hover - c_i) <= 1) isPreview = true;
                                 }
                                 
-                                const previewClass = isPreview ? (v ? 'preview-destructive' : 'preview') : '';
+                                // אם התא דלוק הוא יקבל את הקלאס שמדגיש עמעום/כיבוי. אם הוא כבוי הוא יקבל הילה כחולה.
+                                const previewClass = isPreview ? (v ? 'preview-off' : 'preview-on') : '';
                                 
                                 return (
                                     <div key={i} className="node-container">
