@@ -23,6 +23,7 @@ body { margin: 0; background: #020202; color: #fff; font-family: monospace; over
 .node-container { position: relative; width: 55px; height: 55px; }
 .node { width: 100%; height: 100%; border-radius: 50%; cursor: pointer; transition: 0.3s; border: 2px solid #222; background: #050505; }
 .node.active { background: #06b6d4; border-color: #06b6d4; box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); }
+.node.preview { background: rgba(6, 182, 212, 0.25); border-color: #06b6d4; }
 
 .hud-label { color: #555; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
 .efficiency-bar { height: 4px; background: #111; border-radius: 2px; margin-top: 6px; overflow: hidden; width: 100px; }
@@ -160,6 +161,8 @@ export default function InvariantMaster() {
     const [hintStep, setHintStep] = useState(0);
     const [showPAR, setShowPAR] = useState(false);
     const [timer, setTimer] = useState(0);
+    const [previewMode, setPreviewMode] = useState(true); // מצב עזר דלוק כברירת מחדל
+    const [hoverNode, setHoverNode] = useState(null); // זוכר על איזה תא העכבר נמצא
 
     const lv = LEVELS[lvIdx];
     const rows = lv.rows, cols = lv.cols;
@@ -291,16 +294,34 @@ export default function InvariantMaster() {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10, margin: '0 auto', width: 'fit-content' }}>
-                        {board.map((v, i) => (
-                            <div key={i} className="node-container">
-                                <button className={`node ${v ? 'active' : ''}`} onClick={() => handleNode(i)} />
-                            </div>
-                        ))}
+                        {board.map((v, i) => {
+                            let isPreview = false;
+                            if (previewMode && hoverNode !== null) {
+                                const r_hover = Math.floor(hoverNode / cols), c_hover = hoverNode % cols;
+                                const r_i = Math.floor(i / cols), c_i = i % cols;
+                                if (Math.abs(r_hover - r_i) + Math.abs(c_hover - c_i) <= 1) isPreview = true;
+                            }
+                            
+                            return (
+                                <div key={i} className="node-container">
+                                    <button 
+                                        className={`node ${v ? 'active' : ''} ${isPreview && !v ? 'preview' : ''}`} 
+                                        onClick={() => handleNode(i)}
+                                        onMouseEnter={() => setHoverNode(i)}
+                                        onMouseLeave={() => setHoverNode(null)}
+                                        style={isPreview && v ? { boxShadow: '0 0 20px #ef4444', borderColor: '#ef4444' } : {}}
+                                    />
+                                </div>
+                            );
+                        })}
                     </div>
 
                     <div style={{ marginTop: 30, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button className="btn-util" onClick={() => { SFX.undo(); setBoard(history[history.length-1]); setHistory(p=>p.slice(0,-1)); setMoves(m=>Math.max(0, m-1)); setUndos(u=>u+1); }} disabled={history.length === 0 || locked}>UNDO</button>
                         <button className="btn-util" onClick={() => initLevel(lvIdx)}>RESTART</button>
+                        <button className="btn-util" onClick={() => setPreviewMode(!previewMode)} style={{ color: previewMode ? '#06b6d4' : '#666', borderColor: previewMode ? '#06b6d4' : '#333' }}>
+                            PREVIEW [{previewMode ? 'ON' : 'OFF'}]
+                        </button>
                         <button className="btn-util" onClick={() => setShowPAR(true)} disabled={!parUnlocked}>
                             {showPAR ? `PAR: ${lv.par}` : "SHOW PAR (?)"}
                         </button>
