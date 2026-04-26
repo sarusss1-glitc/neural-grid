@@ -159,6 +159,8 @@ const LEVELS = [
 
 // --- 5. MAIN COMPONENT ---
 export default function InvariantMaster() {
+    const [anomalyPhase, setAnomalyPhase] = useState(0); // 0=רגיל, 1=גליץ', 2=הוכחה
+    const [discoveredRules, setDiscoveredRules] = useState([]); // שומר איזה חוקים השחקן כבר גילה
     const [scene, setScene] = useState("boot");
     const [lvIdx, setLvIdx] = useState(0);
     const [board, setBoard] = useState([]);
@@ -199,24 +201,71 @@ export default function InvariantMaster() {
         setHistory([]); setMoves(0); setUndos(0); setHintStep(0); setShowPAR(false); setLocked(false);
     };
 
-    const handleNode = (i) => {
+const handleNode = (clickedIdx) => {
         if (locked) return;
         SFX.click();
-        const nb = [...board];
-        const r = Math.floor(i / cols), c = i % cols;
-        [i, i-1, i+1, i-cols, i+cols].forEach(j => {
-            if (j >= 0 && j < nb.length && Math.abs(Math.floor(j/cols) - r) + Math.abs((j%cols) - c) <= 1) nb[j] ^= 1;
-        });
+        setLocked(true);
 
-        setHistory(prev => [...prev, board]);
-        setBoard(nb);
-        
-        const won = nb.every(v => v === 1);
-        setMoves(m => {
-            const next = m + 1;
-            if (won && lv.solvable !== false) handleWinUpdate(next);
-            return next;
+        const r = Math.floor(clickedIdx / cols);
+        const c = clickedIdx % cols;
+        const affected = [clickedIdx, clickedIdx - 1, clickedIdx + 1, clickedIdx - cols, clickedIdx + cols]
+            .filter(j =>
+                j >= 0 &&
+                j < board.length &&
+                Math.abs(Math.floor(j / cols) - r) + Math.abs((j % cols) - c) <= 1
+            )
+            .sort((a, b) => (a === clickedIdx ? -1 : b === clickedIdx ? 1 : 0));
+
+        setHistory(prev => [...prev, [...board]]);
+
+        let rippleBoard = [...board];
+
+        affected.forEach((cellIdx, step) => {
+            setTimeout(() => {
+                rippleBoard = [...rippleBoard];
+                rippleBoard[cellIdx] ^= 1;
+                setBoard([...rippleBoard]);
+
+                if (step === affected.length - 1) {
+                    const won = rippleBoard.every(v => v === 1);
+                    setMoves(m => {
+                        const next = m + 1;
+                        if (won && lv.solvable !== false) handleWinUpdate(next);
+                        return next;
+                    });
+                    if (!won) setLocked(false);
+                }
+            }, step * 70); 
         });
+    };
+
+    const handleAnomaly = () => {
+        if (locked) return;
+        setLocked(true);
+        setAnomalyPhase(1);
+
+        let pulseCount = 0;
+        const glitchInterval = setInterval(() => {
+            setBoard(prev => {
+                const nb = [...prev];
+                for (let k = 0; k < 3; k++) nb[Math.floor(Math.random() * nb.length)] ^= 1;
+                return nb;
+            });
+            pulseCount++;
+
+            if (pulseCount >= 10) {
+                clearInterval(glitchInterval);
+                setBoard([...lv.start]);
+                setAnomalyPhase(2);
+
+                setTimeout(() => {
+                    SFX.win();
+                    setProgress(p => ({ ...p, [lvIdx]: Math.max(p[lvIdx] || 0, 3) }));
+                    setAnomalyPhase(0);
+                    setScene("win");
+                }, 3500); // 3.5 שניות לקרוא את ההוכחה
+            }
+        }, 110);
     };
 
     const getStars = (m, u) => {
@@ -298,7 +347,9 @@ export default function InvariantMaster() {
                     </div>
 
                     <div style={{ textAlign: 'center', marginBottom: 25 }}>
-                        <div className="hud-label" style={{ color: '#06b6d4' }}>{lv.concept}</div>
+                        <div className="hud-label" style={{ color: '#06b6d4' }}>
+    {progress[lvIdx] ? lv.concept : "??? (STABILIZE TO DISCOVER)"}
+</div>
                         <div style={{ fontSize: 11, color: '#444' }}>{cols}x{rows} GRID | MOVES: {moves}</div>
                     </div>
 
@@ -339,14 +390,28 @@ export default function InvariantMaster() {
                             {showPAR ? `PAR: ${lv.par}` : "SHOW PAR (?)"}
                         </button>
                         <button className="btn-util" onClick={() => { SFX.hint(); setHintStep(s => s + 1); }} disabled={hintStep >= lv.hints.length}>HINT</button>
-                        {!lv.solvable && (
-                            <button className="btn-util" style={{ background: '#ef4444', color: '#fff', border: 'none' }} onClick={handleAnomaly}>DECLARE ANOMALY</button>
+                       {!lv.solvable && (
+                            <button className="btn-util" disabled={locked} style={{ background: locked ? '#7f1d1d' : '#ef4444', color: '#fff', border: 'none', animation: !locked ? 'pulseGlow 1.5s infinite' : 'none' }} onClick={handleAnomaly}>
+                                {locked ? 'ANALYZING...' : '⚠ DECLARE ANOMALY'}
+                            </button>
                         )}
                     </div>
 
                     {hintStep > 0 && (
                         <div style={{ marginTop: 20, color: '#888', fontSize: 12, textAlign: 'left', padding: 10, background: '#0a0a0a', borderLeft: '2px solid #06b6d4' }}>
                             {lv.hints.slice(0, hintStep).map((h, i) => <div key={i}>{"> "} {h}</div>)}
+                        </div>
+                    )}
+
+                    {/* מסך הדרמה של האנומליה יקפוץ לכאן כשצריך */}
+                    {anomalyPhase === 2 && (
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(3, 7, 18, 0.95)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.4s ease', zIndex: 100, padding: 40, textAlign: 'center' }}>
+                            <div style={{ color: '#ef4444', fontSize: 13, letterSpacing: 4, marginBottom: 12 }}>⚠ ANOMALY CONFIRMED</div>
+                            <div style={{ color: '#06b6d4', fontSize: 24, fontWeight: 'bold', marginBottom: 30 }}>QUANTUM LOCK DETECTED</div>
+                            <div style={{ background: '#0f172a', border: '1px solid #ef4444', borderRadius: 8, padding: '20px 30px', maxWidth: 420, color: '#f87171', fontSize: 13, lineHeight: 1.8, fontStyle: 'italic' }}>
+                                {lv.proof || "This state lies outside the reachable subspace."}
+                            </div>
+                            <div style={{ color: '#374151', fontSize: 11, marginTop: 25 }}>ANALYZING KERNEL INTERSECTION...</div>
                         </div>
                     )}
                 </div>
@@ -356,7 +421,9 @@ export default function InvariantMaster() {
                 <div style={{ textAlign: 'center', marginTop: '15vh', animation: 'fadeIn 0.8s' }}>
                     <h1 style={{ color: '#06b6d4', letterSpacing: 8 }}>STABILIZED</h1>
                     <div style={{ background: '#0a0a0a', border: '1px solid #222', padding: 30, borderRadius: 8, margin: '30px 0', minWidth: 300 }}>
-                        <div className="hud-label">{lv.concept}</div>
+                        <div style={{ color: '#22c55e', fontSize: 12, letterSpacing: 2, marginBottom: 10 }}>SIGNAL STABILIZED</div>
+                        <div className="hud-label" style={{ color: '#06b6d4', fontSize: 14 }}>YOU DISCOVERED:</div>
+                        <div style={{ fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 15 }}>{lv.concept}</div>
                         <div style={{ fontSize: 40, margin: '15px 0' }}>{"⭐️".repeat(currentStars)}</div>
                         <div style={{ color: '#555', fontSize: 11 }}>{moves} MOVES | PAR: {lv.par}</div>
                         {lv.solvable === false && <div style={{ color: '#ef4444', fontSize: 11, marginTop: 15 }}>PROOF: {lv.proof}</div>}
