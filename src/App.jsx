@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 
 // --- 1. CSS STYLES (Premium Neon UI) ---
 const styles = `
 @keyframes scanline { 0% { top: 0%; } 100% { top: 100%; } }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pulseGlow { 0% { box-shadow: 0 0 15px #00f0ff, inset 0 0 10px #00f0ff; } 50% { box-shadow: 0 0 25px #00f0ff, inset 0 0 15px #00f0ff; } 100% { box-shadow: 0 0 15px #00f0ff, inset 0 0 10px #00f0ff; } }
+@keyframes dailyPulse { 0% { box-shadow: 0 0 15px rgba(234, 179, 8, 0.4); border-color: rgba(234, 179, 8, 0.5); } 50% { box-shadow: 0 0 30px rgba(234, 179, 8, 0.8); border-color: rgba(234, 179, 8, 1); } 100% { box-shadow: 0 0 15px rgba(234, 179, 8, 0.4); border-color: rgba(234, 179, 8, 0.5); } }
 
 * { box-sizing: border-box; }
 body { margin: 0; background: #030712; color: #f8fafc; font-family: 'Courier New', Courier, monospace; overflow-x: hidden; user-select: none; }
@@ -25,17 +26,21 @@ body { margin: 0; background: #030712; color: #f8fafc; font-family: 'Courier New
 /* Active Node (Neon Cyan) */
 .node.active { background: #00f0ff; border: 2px solid #fff; animation: pulseGlow 2s infinite; }
 
-/* Preview Nodes (FIXED: Logical Colors) */
+/* Preview Nodes */
 .node.preview-on { background: rgba(0, 240, 255, 0.15); border: 2px dashed #00f0ff; box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
 .node.active.preview-off { background: rgba(0, 240, 255, 0.1); border: 2px dashed #64748b; box-shadow: none; animation: none; opacity: 0.3; }
 
 /* UI Elements */
 .hud-label { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; font-weight: bold; }
-.level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; max-width: 550px; margin: 20px auto; max-height: 65vh; overflow-y: auto; padding: 25px; background: linear-gradient(180deg, rgba(15,23,42,0.6) 0%, rgba(2,6,23,0.8) 100%); border-radius: 16px; border: 1px solid rgba(0, 240, 255, 0.15); box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 0 20px rgba(0, 240, 255, 0.05); backdrop-filter: blur(10px); }
+.level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; max-width: 550px; margin: 20px auto; max-height: 55vh; overflow-y: auto; padding: 25px; background: linear-gradient(180deg, rgba(15,23,42,0.6) 0%, rgba(2,6,23,0.8) 100%); border-radius: 16px; border: 1px solid rgba(0, 240, 255, 0.15); box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 0 20px rgba(0, 240, 255, 0.05); backdrop-filter: blur(10px); }
 .level-btn { aspect-ratio: 1; border-radius: 8px; border: 1px solid #334155; background: rgba(30, 41, 59, 0.6); color: #f8fafc; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 .level-btn:hover:not(:disabled) { border-color: #00f0ff; transform: scale(1.1) translateY(-2px); background: rgba(0, 240, 255, 0.15); box-shadow: 0 10px 20px rgba(0, 240, 255, 0.3), inset 0 0 10px rgba(0, 240, 255, 0.2); z-index: 10; }
 .level-btn:disabled { opacity: 0.45; background: rgba(15, 23, 42, 0.3); border-color: #0f172a; color: #475569; box-shadow: none; }
 .level-star { position: absolute; top: -6px; right: -6px; font-size: 11px; border-radius: 50%; width: 22px; height: 22px; display:flex; justify-content:center; align-items:center; }
+
+/* Daily Button */
+.daily-btn { width: 100%; max-width: 550px; margin: 0 auto 20px auto; padding: 20px; font-size: 18px; background: linear-gradient(90deg, rgba(3,7,18,1) 0%, rgba(30,41,59,1) 50%, rgba(3,7,18,1) 100%); color: #eab308; border-radius: 12px; cursor: pointer; transition: all 0.3s; text-transform: uppercase; font-weight: bold; letter-spacing: 2px; animation: dailyPulse 3s infinite; }
+.daily-btn:hover { transform: translateY(-3px); background: linear-gradient(90deg, rgba(15,23,42,1) 0%, rgba(71,85,105,1) 50%, rgba(15,23,42,1) 100%); color: #fff; }
 `;
 
 // --- 2. AUDIO ENGINE ---
@@ -89,7 +94,7 @@ const UL = (size, board, concept, hints, proof) => ({
 
 // --- 4. THE 60 LEVELS ARCHIVE ---
 const LEVELS = [
-   // PHASE 1: THE DISCOVERY HOOK (1-15)
+    // PHASE 1: THE DISCOVERY HOOK (1-15)
     B(3, [4], "A single pulse affects more than itself", ["The center neuron affects its neighbors."]),
     B(3, [0, 8], "Opposite corners create symmetry", ["Think in mirrors."]),
     B(3, [0], "Not all nodes are equal. Corners are restricted", ["Edges have fewer connections."]),
@@ -131,7 +136,8 @@ const LEVELS = [
     B(4, [0, 1, 2, 3, 4, 8, 12], "The L-Shape", ["Combine row and column."]),
     B(4, [5, 6, 9, 10, 0, 3], "Core and Corners", ["A symmetric lock."]),
     B(4, [1, 2, 4, 11, 13, 14], "The Asymmetric Ring", ["Try to outline the edges."]),
-    UL(4, [1,0,1,0, 0,1,0,1, 1,1,1,1, 1,1,1,1], "Checkerboard Anomaly", ["Symmetry is an illusion here."], "PROOF: Alternating parity in 4D space cannot be orthogonalized."),    B(4, [0, 2, 5, 7, 8, 10, 13, 15], "Checkerboard", ["An alternating grid pattern."]),
+    UL(4, [1,0,1,0, 0,1,0,1, 1,1,1,1, 1,1,1,1], "Checkerboard Anomaly", ["Symmetry is an illusion here."], "PROOF: Alternating parity in 4D space cannot be orthogonalized."),
+    B(4, [0, 2, 5, 7, 8, 10, 13, 15], "Checkerboard", ["An alternating grid pattern."]),
     B(4, [0, 1, 2, 3, 4, 5, 6, 7], "Top Hemisphere", ["A heavy inversion."]),
     B(4, [0, 1, 4, 5, 10, 11, 14, 15], "Dual Blocks", ["Opposite corner blocks."]),
     B(4, [0, 3, 5, 6, 9, 10, 12, 15], "The Large X", ["Corners and core combined."]),
@@ -155,12 +161,53 @@ const LEVELS = [
     B(4, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], "The Determinant", ["Total Calibration."])
 ];
 
+// --- GENERATE DAILY ALGORITHM ---
+const generateDailyLevel = () => {
+    const today = new Date();
+    // Creates a seed like "20260426"
+    const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+    let seed = parseInt(dateStr);
+    
+    // Deterministic random
+    const random = () => {
+        seed = (seed * 1664525 + 1013904223) % 4294967296;
+        return seed / 4294967296;
+    };
+
+    const size = 4;
+    let board = Array(size * size).fill(1);
+    const par = 6 + Math.floor(random() * 4); // PAR between 6 and 9
+
+    // Unique clicks guarantee a non-trivial puzzle
+    const uniqueClicks = new Set();
+    while (uniqueClicks.size < par) {
+        uniqueClicks.add(Math.floor(random() * (size * size)));
+    }
+
+    uniqueClicks.forEach(idx => {
+        const r = Math.floor(idx / size), c = idx % size;
+        [idx, idx-1, idx+1, idx-size, idx+size].forEach(j => {
+            if (j >= 0 && j < board.length && Math.abs(Math.floor(j/size) - r) + Math.abs((j%size) - c) <= 1) {
+                board[j] ^= 1;
+            }
+        });
+    });
+
+    return { 
+        id: `daily_${dateStr}`,
+        concept: `DAILY SEED: ${dateStr}`, 
+        rows: size, cols: size, 
+        start: board, par: par, 
+        solvable: true, hints: ["The world shares this seed.", "Trust your math. No hints."] 
+    };
+};
+
+
 // --- 5. MAIN COMPONENT ---
 export default function InvariantMaster() {
-    const [anomalyPhase, setAnomalyPhase] = useState(0); // 0=רגיל, 1=גליץ', 2=הוכחה
-    const [discoveredRules, setDiscoveredRules] = useState([]); // שומר איזה חוקים השחקן כבר גילה
+    const [anomalyPhase, setAnomalyPhase] = useState(0); 
     const [scene, setScene] = useState("boot");
-    const [lvIdx, setLvIdx] = useState(0);
+    const [lvIdx, setLvIdx] = useState(0); // -1 means Daily Challenge
     const [board, setBoard] = useState([]);
     const [history, setHistory] = useState([]);
     const [moves, setMoves] = useState(0);
@@ -170,12 +217,14 @@ export default function InvariantMaster() {
     const [hintStep, setHintStep] = useState(0);
     const [showPAR, setShowPAR] = useState(false);
     const [timer, setTimer] = useState(0);
-    const [previewMode, setPreviewMode] = useState(false); // מצב עזר דלוק כברירת מחדל
-    const [hoverNode, setHoverNode] = useState(null); // זוכר על איזה תא העכבר נמצא
+    const [previewMode, setPreviewMode] = useState(false); 
+    const [hoverNode, setHoverNode] = useState(null); 
 
-    const lv = LEVELS[lvIdx];
+    const dailyLevel = useMemo(() => generateDailyLevel(), []);
+    const lv = lvIdx === -1 ? dailyLevel : LEVELS[lvIdx];
     const rows = lv.rows, cols = lv.cols;
 
+    // VIRAL HOOK: Direct to Level 0 for new players, Menu for returning
     useEffect(() => {
         const saved = localStorage.getItem("neural_grid_60_progress");
         let isReturningPlayer = false;
@@ -191,7 +240,6 @@ export default function InvariantMaster() {
             if (isReturningPlayer) {
                 setScene("menu");
             } else {
-                // חכת הוויראליות: שחקן חדש נזרק ישר לשלב 1!
                 setLvIdx(0);
                 initLevel(0);
                 setScene("play");
@@ -211,7 +259,7 @@ export default function InvariantMaster() {
     }, [scene, lvIdx]);
 
     const initLevel = (idx) => {
-        const current = LEVELS[idx];
+        const current = idx === -1 ? dailyLevel : LEVELS[idx];
         setBoard([...current.start]);
         setHistory([]); setMoves(0); setUndos(0); setHintStep(0); setShowPAR(false); setLocked(false);
     };
@@ -235,12 +283,10 @@ export default function InvariantMaster() {
 
         affected.forEach((cellIdx, step) => {
             setTimeout(() => {
-                // שימוש ב-Callback כדי ש-React 18 לא יאבד פריימים באנימציה
                 setBoard(prevBoard => {
                     const nb = [...prevBoard];
                     nb[cellIdx] ^= 1;
                     
-                    // בבדיקה של הצעד האחרון בגל:
                     if (step === affected.length - 1) {
                         const won = nb.every(v => v === 1);
                         setMoves(m => {
@@ -252,7 +298,7 @@ export default function InvariantMaster() {
                     }
                     return nb;
                 });
-            }, step * 80); // האטתי טיפה את הגל ל-80ms כדי שייראה יותר אורגני
+            }, step * 80); 
         });
     };
 
@@ -280,7 +326,7 @@ export default function InvariantMaster() {
                     setProgress(p => ({ ...p, [lvIdx]: Math.max(p[lvIdx] || 0, 3) }));
                     setAnomalyPhase(0);
                     setScene("win");
-                }, 3500); // 3.5 שניות לקרוא את ההוכחה
+                }, 3500); 
             }
         }, 110);
     };
@@ -300,22 +346,30 @@ export default function InvariantMaster() {
         const score = getStars(nextMoves, undos);
         setTimeout(() => {
             SFX.win();
-            setProgress(p => ({ ...p, [lvIdx]: Math.max(p[lvIdx] || 0, score) }));
+            // Save logic supports both standard indexes and the daily ID string
+            const saveKey = lvIdx === -1 ? dailyLevel.id : lvIdx;
+            setProgress(p => ({ ...p, [saveKey]: Math.max(p[saveKey] || 0, score) }));
             setScene("win");
-        }, 1200); // 1.2 שניות שלמות כדי להנות מהלוח המואר לפני שעוברים מסך!
+        }, 1200);
     };
 
-   const generateShareText = () => {
-        const grid = board.map(v => v ? "🟦" : "⬛").reduce((acc, emoji, i) => {
+    const generateShareText = () => {
+        const grid = (lvIdx === -1 ? dailyLevel.start : LEVELS[lvIdx].start).map(v => v ? "🟦" : "⬛").reduce((acc, emoji, i) => {
             return acc + emoji + ((i + 1) % cols === 0 ? "\n" : "");
         }, "");
         
-        // טקסט מלכודת ויראלי ותחרותי
-        const text = `99% FAIL THIS GRID.\nI stabilized NEURAL GRID #${lvIdx + 1} in ${moves} moves.\n${"⭐️".repeat(currentStars)}\n\n${grid}\nBeat my score: [Link Here]`;
+        let text = "";
+        if (lvIdx === -1) {
+            text = `NEURAL GRID - ${dailyLevel.id.replace('daily_', '')}\n${"⭐️".repeat(currentStars)}\nMOVES: ${moves} (PAR: ${lv.par})\n\n${grid}\nCan you beat the global seed?`;
+        } else {
+            text = `99% FAIL THIS GRID.\nI stabilized NEURAL GRID #${lvIdx + 1} in ${moves} moves.\n${"⭐️".repeat(currentStars)}\n\n${grid}\nBeat my score:`;
+        }
         
         navigator.clipboard.writeText(text);
         alert("Copied to clipboard! Ready to brag.");
     };
+
+    const dailyStars = progress[dailyLevel.id] || 0;
 
     return (
         <div style={{ padding: 20, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -329,11 +383,18 @@ export default function InvariantMaster() {
                 </div>
             )}
 
-           {scene === "menu" && (
+            {scene === "menu" && (
                 <div style={{ width: '100%', maxWidth: 650, textAlign: 'center', animation: 'fadeIn 0.5s', position: 'relative' }}>
-                    {/* הילת רקע זוהרת למסך */}
                     <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90%', height: '90%', background: 'radial-gradient(circle, rgba(0,240,255,0.08) 0%, transparent 70%)', zIndex: -1, pointerEvents: 'none' }} />
                     
+                    <button 
+                        className="daily-btn"
+                        onClick={() => { SFX.nav(); setLvIdx(-1); initLevel(-1); setScene("play"); }}
+                    >
+                        ⚡ PLAY DAILY CHALLENGE ⚡
+                        {dailyStars > 0 && <div style={{fontSize: 12, marginTop: 5, color: '#22c55e'}}>COMPLETED: {"★".repeat(dailyStars)}</div>}
+                    </button>
+
                     <h2 style={{ letterSpacing: 5, color: '#00f0ff', textShadow: '0 0 15px rgba(0,240,255,0.6)', margin: '0 0 5px 0' }}>SIGNAL ARCHIVE</h2>
                     <div style={{ color: '#94a3b8', fontSize: 11, marginBottom: 25, letterSpacing: 2 }}>SELECT A NODE TO STABILIZE</div>
                     
@@ -358,7 +419,7 @@ export default function InvariantMaster() {
             {scene === "play" && (
                 <div style={{ width: '100%', maxWidth: 500, animation: 'fadeIn 0.5s' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-                        <button className="btn-util" onClick={() => setScene("menu")}>← LEVELS</button>
+                        <button className="btn-util" onClick={() => setScene("menu")}>← {lvIdx === -1 ? 'MENU' : 'LEVELS'}</button>
                         <div style={{ textAlign: 'right' }}>
                             <div className="hud-label">RATING</div>
                             <div style={{ color: '#00f0ff', fontSize: 16, textShadow: '0 0 8px rgba(0,240,255,0.6)' }}>{"⭐️".repeat(currentStars)}</div>
@@ -367,7 +428,7 @@ export default function InvariantMaster() {
 
                     <div style={{ textAlign: 'center', marginBottom: 25 }}>
                         <div className="hud-label" style={{ color: '#00f0ff', textShadow: '0 0 8px rgba(0,240,255,0.4)', fontSize: 14 }}>
-                            {progress[lvIdx] ? lv.concept : "??? (STABILIZE TO DISCOVER)"}
+                            {lvIdx === -1 ? lv.concept : (progress[lvIdx] ? lv.concept : "??? (STABILIZE TO DISCOVER)")}
                         </div>
                         <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 8 }}>{cols}x{rows} GRID | MOVES: {moves}</div>
                     </div>
@@ -382,7 +443,6 @@ export default function InvariantMaster() {
                                     if (Math.abs(r_hover - r_i) + Math.abs(c_hover - c_i) <= 1) isPreview = true;
                                 }
                                 
-                                // אם התא דלוק הוא יקבל את הקלאס שמדגיש עמעום/כיבוי. אם הוא כבוי הוא יקבל הילה כחולה.
                                 const previewClass = isPreview ? (v ? 'preview-off' : 'preview-on') : '';
                                 
                                 return (
@@ -405,10 +465,14 @@ export default function InvariantMaster() {
                         <button className="btn-util" onClick={() => setPreviewMode(!previewMode)} style={{ color: previewMode ? '#00f0ff' : '#94a3b8', borderColor: previewMode ? '#00f0ff' : '#1e293b' }}>
                             PREVIEW [{previewMode ? 'ON' : 'OFF'}]
                         </button>
-                        <button className="btn-util" onClick={() => setShowPAR(true)} disabled={!parUnlocked}>
-                            {showPAR ? `PAR: ${lv.par}` : "SHOW PAR (?)"}
-                        </button>
-                        <button className="btn-util" onClick={() => { SFX.hint(); setHintStep(s => s + 1); }} disabled={hintStep >= lv.hints.length}>HINT</button>
+                        {lv.solvable !== false && (
+                            <button className="btn-util" onClick={() => setShowPAR(true)} disabled={!parUnlocked}>
+                                {showPAR ? `PAR: ${lv.par}` : "SHOW PAR (?)"}
+                            </button>
+                        )}
+                        {lvIdx !== -1 && (
+                            <button className="btn-util" onClick={() => { SFX.hint(); setHintStep(s => s + 1); }} disabled={hintStep >= lv.hints.length}>HINT</button>
+                        )}
                         {!lv.solvable && (
                             <button className="btn-util" disabled={locked} style={{ background: locked ? '#7f1d1d' : '#ef4444', color: '#fff', border: 'none', animation: !locked ? 'pulseGlow 1.5s infinite' : 'none' }} onClick={handleAnomaly}>
                                 {locked ? 'ANALYZING...' : '⚠ DECLARE ANOMALY'}
@@ -416,7 +480,7 @@ export default function InvariantMaster() {
                         )}
                     </div>
 
-                    {hintStep > 0 && (
+                    {hintStep > 0 && lvIdx !== -1 && (
                         <div style={{ marginTop: 20, color: '#94a3b8', fontSize: 12, textAlign: 'left', padding: 15, background: 'rgba(15,23,42,0.6)', borderLeft: '2px solid #00f0ff', borderRadius: '4px' }}>
                             {lv.hints.slice(0, hintStep).map((h, i) => <div key={i} style={{marginBottom: 6}}>{"> "} {h}</div>)}
                         </div>
@@ -440,19 +504,27 @@ export default function InvariantMaster() {
                     <h1 style={{ color: '#00f0ff', letterSpacing: 8, textShadow: '0 0 15px rgba(0,240,255,0.6)' }}>STABILIZED</h1>
                     <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid #1e293b', padding: 40, borderRadius: 12, margin: '30px 0', minWidth: 350, boxShadow: '0 20px 40px rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)' }}>
                         <div style={{ color: '#22c55e', fontSize: 12, letterSpacing: 2, marginBottom: 15, fontWeight: 'bold' }}>SIGNAL STABILIZED</div>
-                        <div className="hud-label" style={{ color: '#94a3b8', fontSize: 12 }}>YOU DISCOVERED:</div>
+                        
+                        {lvIdx !== -1 && <div className="hud-label" style={{ color: '#94a3b8', fontSize: 12 }}>YOU DISCOVERED:</div>}
                         <div style={{ fontSize: 22, fontWeight: 'bold', color: '#fff', margin: '10px 0 25px 0' }}>{lv.concept}</div>
+                        
                         <div style={{ fontSize: 40, margin: '15px 0', textShadow: '0 0 10px rgba(255,255,255,0.3)' }}>{"⭐️".repeat(currentStars)}</div>
                         <div style={{ color: '#64748b', fontSize: 12, marginTop: 15 }}>{moves} MOVES | PAR: {lv.par}</div>
                         {lv.solvable === false && <div style={{ color: '#ef4444', fontSize: 12, marginTop: 20, fontStyle: 'italic' }}>PROOF: {lv.proof}</div>}
                     </div>
                     <div style={{ display: 'flex', gap: 15, justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button className="btn-util" style={{ background: '#00f0ff', color: '#030712', border: 'none', fontSize: '14px', padding: '12px 30px', boxShadow: '0 0 20px rgba(0, 240, 255, 0.4)' }} onClick={generateShareText}>BRAG & SHARE 🔗</button>
-                        <button className="btn-util" onClick={() => setScene("menu")}>LEVELS</button>
-                        <button className="btn-util" style={{ background: '#f8fafc', color: '#030712', border: 'none' }} onClick={() => {
-                            if (lvIdx + 1 < LEVELS.length) { setLvIdx(lvIdx + 1); initLevel(lvIdx + 1); setScene("play"); }
-                            else { setScene("menu"); }
-                        }}>NEXT NODE</button>
+                        
+                        <button className="btn-util" onClick={() => setScene("menu")}>
+                            {lvIdx === -1 ? 'BACK TO MENU' : 'LEVELS'}
+                        </button>
+                        
+                        {lvIdx !== -1 && (
+                            <button className="btn-util" style={{ background: '#f8fafc', color: '#030712', border: 'none' }} onClick={() => {
+                                if (lvIdx + 1 < LEVELS.length) { setLvIdx(lvIdx + 1); initLevel(lvIdx + 1); setScene("play"); }
+                                else { setScene("menu"); }
+                            }}>NEXT NODE</button>
+                        )}
                     </div>
                 </div>
             )}
