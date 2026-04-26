@@ -131,8 +131,7 @@ const LEVELS = [
     B(4, [0, 1, 2, 3, 4, 8, 12], "The L-Shape", ["Combine row and column."]),
     B(4, [5, 6, 9, 10, 0, 3], "Core and Corners", ["A symmetric lock."]),
     B(4, [1, 2, 4, 11, 13, 14], "The Asymmetric Ring", ["Try to outline the edges."]),
-    UL(4, [0,1,1,1, 1,0,1,1, 1,1,1,1, 1,1,1,1], "Diagonal Trap", ["Two adjacent missing nodes."], "PROOF: Diagonal anomaly prevents orthogonal resolution."),
-    B(4, [0, 2, 5, 7, 8, 10, 13, 15], "Checkerboard", ["An alternating grid pattern."]),
+    UL(4, [1,0,1,0, 0,1,0,1, 1,1,1,1, 1,1,1,1], "Checkerboard Anomaly", ["Symmetry is an illusion here."], "PROOF: Alternating parity in 4D space cannot be orthogonalized."),    B(4, [0, 2, 5, 7, 8, 10, 13, 15], "Checkerboard", ["An alternating grid pattern."]),
     B(4, [0, 1, 2, 3, 4, 5, 6, 7], "Top Hemisphere", ["A heavy inversion."]),
     B(4, [0, 1, 4, 5, 10, 11, 14, 15], "Dual Blocks", ["Opposite corner blocks."]),
     B(4, [0, 3, 5, 6, 9, 10, 12, 15], "The Large X", ["Corners and core combined."]),
@@ -179,8 +178,25 @@ export default function InvariantMaster() {
 
     useEffect(() => {
         const saved = localStorage.getItem("neural_grid_60_progress");
-        if (saved) { try { setProgress(JSON.parse(saved)); } catch(e) {} }
-        setTimeout(() => setScene("menu"), 2500);
+        let isReturningPlayer = false;
+        if (saved) { 
+            try { 
+                const parsed = JSON.parse(saved);
+                setProgress(parsed); 
+                if (Object.keys(parsed).length > 0) isReturningPlayer = true;
+            } catch(e) {} 
+        }
+        
+        setTimeout(() => {
+            if (isReturningPlayer) {
+                setScene("menu");
+            } else {
+                // חכת הוויראליות: שחקן חדש נזרק ישר לשלב 1!
+                setLvIdx(0);
+                initLevel(0);
+                setScene("play");
+            }
+        }, 2500);
     }, []);
 
     useEffect(() => {
@@ -289,13 +305,16 @@ export default function InvariantMaster() {
         }, 1200); // 1.2 שניות שלמות כדי להנות מהלוח המואר לפני שעוברים מסך!
     };
 
-    const generateShareText = () => {
+   const generateShareText = () => {
         const grid = board.map(v => v ? "🟦" : "⬛").reduce((acc, emoji, i) => {
             return acc + emoji + ((i + 1) % cols === 0 ? "\n" : "");
         }, "");
-        const text = `NEURAL GRID #${lvIdx + 1}\n${"⭐️".repeat(currentStars)}\nMOVES: ${moves} (PAR: ${lv.par})\n\n${grid}\nCan you stabilize it?`;
+        
+        // טקסט מלכודת ויראלי ותחרותי
+        const text = `99% FAIL THIS GRID.\nI stabilized NEURAL GRID #${lvIdx + 1} in ${moves} moves.\n${"⭐️".repeat(currentStars)}\n\n${grid}\nBeat my score: [Link Here]`;
+        
         navigator.clipboard.writeText(text);
-        alert("Copied to clipboard! Ready to share.");
+        alert("Copied to clipboard! Ready to brag.");
     };
 
     return (
