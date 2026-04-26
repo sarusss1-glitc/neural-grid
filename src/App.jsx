@@ -1,34 +1,43 @@
 import React, { useState, useEffect, useCallback } from "react";
 
-// --- 1. CSS STYLES (The Cyber-Math Aesthetic) ---
+// --- 1. CSS STYLES (Premium Neon UI) ---
 const styles = `
 @keyframes scanline { 0% { top: 0%; } 100% { top: 100%; } }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(6, 182, 212, 0); } 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulseGlow { 0% { box-shadow: 0 0 15px #00f0ff, inset 0 0 10px #00f0ff; } 50% { box-shadow: 0 0 25px #00f0ff, inset 0 0 15px #00f0ff; } 100% { box-shadow: 0 0 15px #00f0ff, inset 0 0 10px #00f0ff; } }
 
 * { box-sizing: border-box; }
-body { margin: 0; background: #020202; color: #fff; font-family: monospace; overflow-x: hidden; user-select: none; }
-.scanline { position: fixed; top: 0; left: 0; width: 100%; height: 2px; background: rgba(6, 182, 212, 0.1); animation: scanline 4s linear infinite; pointer-events: none; z-index: 50; }
+body { margin: 0; background: #030712; color: #f8fafc; font-family: 'Courier New', Courier, monospace; overflow-x: hidden; user-select: none; }
+.scanline { position: fixed; top: 0; left: 0; width: 100%; height: 3px; background: rgba(0, 240, 255, 0.15); animation: scanline 3s linear infinite; pointer-events: none; z-index: 50; }
 
-.btn-util { background: #111; border: 1px solid #333; color: #888; padding: 10px 18px; border-radius: 4px; cursor: pointer; font-size: 11px; transition: 0.2s; font-weight: bold; text-transform: uppercase; }
-.btn-util:hover:not(:disabled) { border-color: #06b6d4; color: #fff; background: #0a0a0a; }
-.btn-util:disabled { opacity: 0.2; cursor: not-allowed; }
+.btn-util { background: #0f172a; border: 1px solid #1e293b; color: #94a3b8; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s ease; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+.btn-util:hover:not(:disabled) { border-color: #00f0ff; color: #fff; background: #020617; box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); transform: translateY(-2px); }
+.btn-util:disabled { opacity: 0.2; cursor: not-allowed; transform: none; box-shadow: none; }
 
-.level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-width: 500px; margin: 30px auto; max-height: 70vh; overflow-y: auto; padding: 15px; border: 1px solid #111; }
-.level-btn { aspect-ratio: 1; border-radius: 6px; border: 1px solid #222; background: #050505; color: #fff; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; position: relative; }
-.level-btn:hover:not(:disabled) { border-color: #06b6d4; transform: scale(1.05); }
-.level-btn:disabled { opacity: 0.15; cursor: not-allowed; }
-.level-star { position: absolute; top: -4px; right: -4px; font-size: 10px; background: #000; border-radius: 50%; width: 18px; height: 18px; display:flex; justify-content:center; align-items:center; border: 1px solid #06b6d4; color: #06b6d4; }
+/* The Game Board Container */
+.board-container { background: rgba(15, 23, 42, 0.6); padding: 30px; border-radius: 16px; border: 1px solid #1e293b; box-shadow: 0 20px 40px rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
 
-.node-container { position: relative; width: 55px; height: 55px; }
-.node { width: 100%; height: 100%; border-radius: 50%; cursor: pointer; transition: 0.3s; border: 2px solid #222; background: #050505; }
-.node.active { background: #06b6d4; border-color: #06b6d4; box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); }
-.node.preview { background: rgba(6, 182, 212, 0.25); border-color: #06b6d4; }
+/* Neural Nodes */
+.node-container { position: relative; width: 60px; height: 60px; }
+.node { width: 100%; height: 100%; border-radius: 50%; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid #1e293b; background: #020617; box-shadow: inset 0 4px 8px rgba(0,0,0,0.8); }
+.node:hover { border-color: #475569; }
 
-.hud-label { color: #555; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
-.efficiency-bar { height: 4px; background: #111; border-radius: 2px; margin-top: 6px; overflow: hidden; width: 100px; }
-.efficiency-fill { height: 100%; background: #06b6d4; transition: width 0.5s ease; }
+/* Active Node (Neon Cyan) */
+.node.active { background: #00f0ff; border: 2px solid #fff; animation: pulseGlow 2s infinite; }
+
+/* Preview Nodes */
+.node.preview { background: rgba(0, 240, 255, 0.15); border: 2px dashed #00f0ff; }
+.node.active.preview-destructive { border: 2px dashed #ff003c; box-shadow: 0 0 20px rgba(255, 0, 60, 0.6); background: #ff003c; animation: none; }
+
+/* UI Elements */
+.hud-label { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; font-weight: bold; }
+.level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; max-width: 550px; margin: 30px auto; max-height: 65vh; overflow-y: auto; padding: 20px; background: rgba(15,23,42,0.4); border-radius: 12px; border: 1px solid #1e293b; }
+.level-btn { aspect-ratio: 1; border-radius: 8px; border: 1px solid #1e293b; background: #0f172a; color: #f8fafc; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.4); }
+.level-btn:hover:not(:disabled) { border-color: #00f0ff; transform: scale(1.08); background: #020617; box-shadow: 0 0 15px rgba(0, 240, 255, 0.2); }
+.level-btn:disabled { opacity: 0.15; cursor: not-allowed; box-shadow: none; }
+.level-star { position: absolute; top: -6px; right: -6px; font-size: 11px; background: #030712; border-radius: 50%; width: 22px; height: 22px; display:flex; justify-content:center; align-items:center; border: 1px solid #00f0ff; color: #00f0ff; box-shadow: 0 0 8px rgba(0, 240, 255, 0.4); }
 `;
+
 
 // --- 2. AUDIO ENGINE ---
 let _ac = null;
@@ -161,7 +170,7 @@ export default function InvariantMaster() {
     const [hintStep, setHintStep] = useState(0);
     const [showPAR, setShowPAR] = useState(false);
     const [timer, setTimer] = useState(0);
-    const [previewMode, setPreviewMode] = useState(true); // מצב עזר דלוק כברירת מחדל
+    const [previewMode, setPreviewMode] = useState(false); // מצב עזר דלוק כברירת מחדל
     const [hoverNode, setHoverNode] = useState(null); // זוכר על איזה תא העכבר נמצא
 
     const lv = LEVELS[lvIdx];
@@ -293,27 +302,31 @@ export default function InvariantMaster() {
                         <div style={{ fontSize: 11, color: '#444' }}>{cols}x{rows} GRID | MOVES: {moves}</div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10, margin: '0 auto', width: 'fit-content' }}>
-                        {board.map((v, i) => {
-                            let isPreview = false;
-                            if (previewMode && hoverNode !== null) {
-                                const r_hover = Math.floor(hoverNode / cols), c_hover = hoverNode % cols;
-                                const r_i = Math.floor(i / cols), c_i = i % cols;
-                                if (Math.abs(r_hover - r_i) + Math.abs(c_hover - c_i) <= 1) isPreview = true;
-                            }
-                            
-                            return (
-                                <div key={i} className="node-container">
-                                    <button 
-                                        className={`node ${v ? 'active' : ''} ${isPreview && !v ? 'preview' : ''}`} 
-                                        onClick={() => handleNode(i)}
-                                        onMouseEnter={() => setHoverNode(i)}
-                                        onMouseLeave={() => setHoverNode(null)}
-                                        style={isPreview && v ? { boxShadow: '0 0 20px #ef4444', borderColor: '#ef4444' } : {}}
-                                    />
-                                </div>
-                            );
-                        })}
+                   <div className="board-container">
+                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12, margin: '0 auto', width: 'fit-content' }}>
+                            {board.map((v, i) => {
+                                let isPreview = false;
+                                if (previewMode && hoverNode !== null) {
+                                    const r_hover = Math.floor(hoverNode / cols), c_hover = hoverNode % cols;
+                                    const r_i = Math.floor(i / cols), c_i = i % cols;
+                                    if (Math.abs(r_hover - r_i) + Math.abs(c_hover - c_i) <= 1) isPreview = true;
+                                }
+                                
+                                // אם התא דלוק (v=1) והוא עומד להיות מושפע, הוא יקבל את הקלאס ההרסני (אדום)
+                                const previewClass = isPreview ? (v ? 'preview-destructive' : 'preview') : '';
+                                
+                                return (
+                                    <div key={i} className="node-container">
+                                        <button 
+                                            className={`node ${v ? 'active' : ''} ${previewClass}`} 
+                                            onClick={() => handleNode(i)}
+                                            onMouseEnter={() => setHoverNode(i)}
+                                            onMouseLeave={() => setHoverNode(null)}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     <div style={{ marginTop: 30, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -349,8 +362,7 @@ export default function InvariantMaster() {
                         {lv.solvable === false && <div style={{ color: '#ef4444', fontSize: 11, marginTop: 15 }}>PROOF: {lv.proof}</div>}
                     </div>
                     <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button className="btn-util" style={{ background: '#22c55e', color: '#000', border: 'none' }} onClick={generateShareText}>SHARE 🔗</button>
-                        <button className="btn-util" onClick={() => setScene("menu")}>LEVELS</button>
+<button className="btn-util" style={{ background: '#00f0ff', color: '#030712', border: 'none', fontSize: '14px', padding: '12px 30px', boxShadow: '0 0 20px rgba(0, 240, 255, 0.6)' }} onClick={generateShareText}>BRAG & SHARE 🔗</button>                        <button className="btn-util" onClick={() => setScene("menu")}>LEVELS</button>
                         <button className="btn-util" style={{ background: '#06b6d4', color: '#000', border: 'none' }} onClick={() => {
                             if (lvIdx + 1 < LEVELS.length) { setLvIdx(lvIdx + 1); initLevel(lvIdx + 1); setScene("play"); }
                             else { setScene("menu"); }
