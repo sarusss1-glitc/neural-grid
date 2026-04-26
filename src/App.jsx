@@ -89,22 +89,22 @@ const UL = (size, board, concept, hints, proof) => ({
 
 // --- 4. THE 60 LEVELS ARCHIVE ---
 const LEVELS = [
-    // PHASE 1: ONBOARDING (1-15)
-    B(3, [4], "Trigger a pulse", ["The center neuron affects its neighbors."]),
-    B(3, [0], "Corner Restriction", ["Edges have fewer connections."]),
-    B(3, [1], "Synaptic Bridge", ["The pulse flows along the axis."]),
-    B(3, [4, 4], "Echo Invariant", ["Double pulses cancel out (mod 2)."]),
-    B(3, [1, 3], "Interference", ["Where pulses meet, signals neutralize."]),
-    B(3, [0, 2, 6, 8], "Pattern Array", ["Anchor corners to clear the core."]),
-    B(3, [0, 2], "Axial Symmetry", ["Mirror pulses to simplify the grid."]),
-    B(3, [1, 4, 7], "Columnar Stabilization", ["Clear a vertical path."]),
-    B(3, [3, 4, 5], "Signal Drift", ["Push noise to the boundary."]),
-    B(3, [0, 4, 8], "Structural Resistance", ["Follow the diagonal."]),
-    B(3, [2, 4, 6], "Balance Point", ["The center is the pivot."]),
-    B(3, [1, 3, 5, 7], "Ring Oscillator", ["Circular dependencies."]),
-    B(3, [0, 1, 2], "Layered Resolution", ["Solve row by row."]),
-    B(3, [6, 7, 8], "Base Stabilization", ["Clear the bottom row."]),
-    B(3, [0, 2, 4, 6, 8], "Neural X", ["The Master 3x3 Calibration."]),
+   // PHASE 1: THE DISCOVERY HOOK (1-15)
+    B(3, [4], "A single pulse affects more than itself", ["The center neuron affects its neighbors."]),
+    B(3, [0, 8], "Opposite corners create symmetry", ["Think in mirrors."]),
+    B(3, [0], "Not all nodes are equal. Corners are restricted", ["Edges have fewer connections."]),
+    B(3, [1, 3], "Pulses interfere and cancel each other", ["Where pulses meet, signals neutralize."]),
+    B(3, [0, 2], "Mirrors simplify chaos", ["Mirror actions create structure."]),
+    B(3, [1, 4, 7], "Columns can be shifted as a system", ["Clear a vertical path."]),
+    B(3, [3, 4, 5], "Instability can be pushed to the edges", ["Move the problem to the boundary."]),
+    B(3, [1, 3, 5, 7], "Some states loop locally", ["Circular dependencies."]),
+    B(3, [0, 4, 8], "The diagonal anchors the grid", ["Follow the diagonal."]),
+    B(3, [2, 4, 6], "The center is the ultimate pivot", ["Balance the extremes."]),
+    B(3, [1, 2], "Asymmetry requires step-by-step logic", ["Solve row by row."]),
+    B(3, [6, 7, 8], "Base stabilization secures the grid", ["Clear the bottom row."]),
+    B(3, [0, 5, 7], "Chaos hides simple paths", ["Don't let the noise confuse you."]),
+    B(3, [2, 3, 8], "Misaligned grids need corner anchors", ["Anchor corners to clear the core."]),
+    B(3, [0, 2, 4, 6, 8], "The system follows hidden rules", ["The Master 3x3 Calibration."]),
 
     // PHASE 2: BRIDGE (16-20)
     B_rect(3, 4, [5], "Dimensional Growth", ["Adapt to the new width."]),
@@ -217,24 +217,26 @@ export default function InvariantMaster() {
 
         setHistory(prev => [...prev, [...board]]);
 
-        let rippleBoard = [...board];
-
         affected.forEach((cellIdx, step) => {
             setTimeout(() => {
-                rippleBoard = [...rippleBoard];
-                rippleBoard[cellIdx] ^= 1;
-                setBoard([...rippleBoard]);
-
-                if (step === affected.length - 1) {
-                    const won = rippleBoard.every(v => v === 1);
-                    setMoves(m => {
-                        const next = m + 1;
-                        if (won && lv.solvable !== false) handleWinUpdate(next);
-                        return next;
-                    });
-                    if (!won) setLocked(false);
-                }
-            }, step * 70); 
+                // שימוש ב-Callback כדי ש-React 18 לא יאבד פריימים באנימציה
+                setBoard(prevBoard => {
+                    const nb = [...prevBoard];
+                    nb[cellIdx] ^= 1;
+                    
+                    // בבדיקה של הצעד האחרון בגל:
+                    if (step === affected.length - 1) {
+                        const won = nb.every(v => v === 1);
+                        setMoves(m => {
+                            const next = m + 1;
+                            if (won && lv.solvable !== false) handleWinUpdate(next);
+                            return next;
+                        });
+                        if (!won) setLocked(false);
+                    }
+                    return nb;
+                });
+            }, step * 80); // האטתי טיפה את הגל ל-80ms כדי שייראה יותר אורגני
         });
     };
 
@@ -284,7 +286,7 @@ export default function InvariantMaster() {
             SFX.win();
             setProgress(p => ({ ...p, [lvIdx]: Math.max(p[lvIdx] || 0, score) }));
             setScene("win");
-        }, 500);
+        }, 1200); // 1.2 שניות שלמות כדי להנות מהלוח המואר לפני שעוברים מסך!
     };
 
     const generateShareText = () => {
